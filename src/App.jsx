@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navigation from "./components/Navigation";
 
 import Home from "./pages/Home";
 import Results from "./pages/Results";
@@ -9,7 +8,6 @@ import Protests from "./pages/Protests";
 export default function App() {
   return (
     <BrowserRouter>
-      <Navigation />
 
       <div className="container">
         <Routes>
