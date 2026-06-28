@@ -1,15 +1,15 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-import Home from "./pages/Home";
-import Results from "./pages/Results";
-import Registration from "./pages/Registration";
-import Protests from "./pages/Protests";
+import Navigation from "./components/Navigation";
+import Home from "./pages/home";
+import Results from "./pages/results";
+import Registration from "./pages/registration";
+import Protests from "./pages/protests";
 
 export default function App() {
   return (
     <BrowserRouter>
-
       <div className="container">
+        <Navigation />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/results" element={<Results />} />
