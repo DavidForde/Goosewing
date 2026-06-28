@@ -334,7 +334,28 @@ export default function Timer() {
           </div>
         </section>
       )}
+function undoFinish(boatId) {
+  const next = finishes
+    .filter((f) => f.boatId !== boatId)
+    .map((f, i) => ({ ...f, position: i + 1 }));
+  setFinishes(next);
+  saveFinishes(next);
+}
 
+function editFinish(boatId) {
+  const finish = finishes.find((f) => f.boatId === boatId);
+  if (!finish) return;
+  const input = prompt(`Edit elapsed time for ${finish.sailNumber} (MM:SS)`, formatTime(finish.elapsed));
+  if (!input) return;
+  const parts = input.split(":").map(Number);
+  if (parts.length !== 2 || parts.some(isNaN)) return;
+  const newElapsed = parts[0] * 60 + parts[1];
+  const next = finishes.map((f) =>
+    f.boatId === boatId ? { ...f, elapsed: newElapsed } : f
+  );
+  setFinishes(next);
+  saveFinishes(next);
+}
       {finishes.length > 0 && (
         <section className="panel">
           <h2>Finishes</h2>
@@ -345,17 +366,43 @@ export default function Timer() {
                 <th>Sail #</th>
                 <th>Boat</th>
                 <th>Elapsed</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {finishes.map((f) => (
-                <tr key={f.boatId}>
-                  <td>{f.position}</td>
-                  <td className="sail-number">{f.sailNumber}</td>
-                  <td>{f.boatName}</td>
-                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{formatTime(f.elapsed)}</td>
-                </tr>
-              ))}
+           {finishes.map((f) => (
+  <tr key={f.boatId}>
+    <td>{f.position}</td>
+    <td className="sail-number">{f.sailNumber}</td>
+    <td>{f.boatName}</td>
+    <td style={{ fontVariantNumeric: "tabular-nums" }}>{formatTime(f.elapsed)}</td>
+    <td>
+      <button onClick={() => undoFinish(f.boatId)} style={{
+        padding: "0.2rem 0.6rem",
+        background: "#c0392b",
+        color: "#fff",
+        border: "none",
+        borderRadius: "4px",
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        marginRight: "0.4rem",
+      }}>Undo</button>
+      <button onClick={() => editFinish(f.boatId)} style={{
+        padding: "0.2rem 0.6rem",
+        background: "#1e3a5f",
+        color: "#fff",
+        border: "none",
+        borderRadius: "4px",
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}>Edit</button>
+    </td>
+  </tr>
+))}
             </tbody>
           </table>
         </section>
