@@ -214,6 +214,29 @@ export default function Timer() {
     saveFinishes(next);
   }
 
+  function undoFinish(boatId) {
+    const next = finishes
+      .filter((f) => f.boatId !== boatId)
+      .map((f, i) => ({ ...f, position: i + 1 }));
+    setFinishes(next);
+    saveFinishes(next);
+  }
+
+  function editFinish(boatId) {
+    const finish = finishes.find((f) => f.boatId === boatId);
+    if (!finish) return;
+    const input = prompt(`Edit elapsed time for ${finish.sailNumber} (MM:SS)`, formatTime(finish.elapsed));
+    if (!input) return;
+    const parts = input.split(":").map(Number);
+    if (parts.length !== 2 || parts.some(isNaN)) return;
+    const newElapsed = parts[0] * 60 + parts[1];
+    const next = finishes.map((f) =>
+      f.boatId === boatId ? { ...f, elapsed: newElapsed } : f
+    );
+    setFinishes(next);
+    saveFinishes(next);
+  }
+
   const finishedIds = new Set(finishes.map((f) => f.boatId));
   const unfinished = boats.filter((b) => !finishedIds.has(b.id));
 
@@ -334,28 +357,7 @@ export default function Timer() {
           </div>
         </section>
       )}
-function undoFinish(boatId) {
-  const next = finishes
-    .filter((f) => f.boatId !== boatId)
-    .map((f, i) => ({ ...f, position: i + 1 }));
-  setFinishes(next);
-  saveFinishes(next);
-}
 
-function editFinish(boatId) {
-  const finish = finishes.find((f) => f.boatId === boatId);
-  if (!finish) return;
-  const input = prompt(`Edit elapsed time for ${finish.sailNumber} (MM:SS)`, formatTime(finish.elapsed));
-  if (!input) return;
-  const parts = input.split(":").map(Number);
-  if (parts.length !== 2 || parts.some(isNaN)) return;
-  const newElapsed = parts[0] * 60 + parts[1];
-  const next = finishes.map((f) =>
-    f.boatId === boatId ? { ...f, elapsed: newElapsed } : f
-  );
-  setFinishes(next);
-  saveFinishes(next);
-}
       {finishes.length > 0 && (
         <section className="panel">
           <h2>Finishes</h2>
