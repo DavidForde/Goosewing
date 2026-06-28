@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navigation from "./components/Navigation";
 import Home from "./pages/Home";
 import Results from "./pages/Results";
 import Registration from "./pages/Registration";
@@ -9,7 +8,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="container">
-        <Navigation />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/results" element={<Results />} />
