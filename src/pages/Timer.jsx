@@ -30,19 +30,104 @@ function saveFinishes(finishes) {
   } catch {}
 }
 
+// --- Audio ---
+function createHorn(audioCtx) {
+  const duration = 2.5;
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  const distortion = audioCtx.createWaveShaper();
+
+  // Make it sound like a foghorn
+  function makeDistortionCurve(amount) {
+    const samples = 256;
+    const curve = new Float32Array(samples);
+    for (let i = 0; i < samples; i++) {
+      const x = (i * 2) / samples - 1;
+      curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
+  }
+
+  distortion.curve = makeDistortionCurve(200);
+  distortion.oversample = "4x";
+
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(180, audioCtx.currentTime);
+  oscillator.frequency.linearRampToValueAtTime(140, audioCtx.currentTime + 0.3);
+  oscillator.frequency.setValueAtTime(140, audioCtx.currentTime + duration - 0.3);
+
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 0.15);
+  gainNode.gain.setValueAtTime(0.6, audioCtx.currentTime + duration - 0.2);
+  gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+  oscillator.connect(distortion);
+  distortion.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  oscillator.start(audioCtx.currentTime);
+  oscillator.stop(audioCtx.currentTime + duration);
+}
+
+function speak(text, onEnd) {
+  if (!window.speechSynthesis) {
+    if (onEnd) onEnd();
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 0.85;
+  utterance.volume = 1;
+  if (onEnd) utterance.onend = onEnd;
+  window.speechSynthesis.speak(utterance);
+}
+
+function hornThenSpeak(audioCtx, phrase) {
+  createHorn(audioCtx);
+  setTimeout(() => speak(phrase), 2800);
+}
+
+function spokenCountdown(audioCtx) {
+  const numbers = ["Ten","Nine","Eight","Seven","Six","Five","Four","Three","Two","One"];
+  numbers.forEach((word, i) => {
+    setTimeout(() => {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate = 0.85;
+      utterance.pitch = 0.85;
+      utterance.volume = 1;
+      window.speechSynthesis.speak(utterance);
+    }, i * 1000);
+  });
+}
+
 export default function Timer() {
-  const [phase, setPhase] = useState(null); // null = not started
+  const [phase, setPhase] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(300);
   const [running, setRunning] = useState(false);
-  const [started, setStarted] = useState(false); // gun has fired
-  const [elapsed, setElapsed] = useState(0); // seconds since gun
-  const [finishes, setFinishes] = useState([]); // { boatId, sailNumber, boatName, elapsed }
+  const [started, setStarted] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [finishes, setFinishes] = useState([]);
   const [boats, setBoats] = useState([]);
   const intervalRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const countdownFiredRef = useRef(false);
 
   useEffect(() => {
     setBoats(loadBoats());
   }, []);
+
+  function getAudioCtx() {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  }
 
   useEffect(() => {
     if (!running) return;
@@ -51,16 +136,35 @@ export default function Timer() {
       if (!started) {
         setSecondsLeft((prev) => {
           const next = prev - 1;
-          // Check if we hit a sequence boundary
+
+          // Sequence signals
+          if (next === 299) {
+            hornThenSpeak(getAudioCtx(), "Class flag up");
+            setPhase("Warning");
+          }
+          if (next === 239) {
+            hornThenSpeak(getAudioCtx(), "P flag up");
+            setPhase("Preparatory");
+          }
+          if (next === 59) {
+            hornThenSpeak(getAudioCtx(), "P flag down");
+            setPhase("One Minute");
+          }
+          if (next === 9 && !countdownFiredRef.current) {
+            countdownFiredRef.current = true;
+            spokenCountdown(getAudioCtx());
+          }
           if (next <= 0) {
+            hornThenSpeak(getAudioCtx(), "Class flag down");
             setStarted(true);
             setPhase("Racing");
             return 0;
           }
-          // Update phase label
+
           if (next <= 60) setPhase("One Minute");
           else if (next <= 240) setPhase("Preparatory");
           else setPhase("Warning");
+
           return next;
         });
       } else {
@@ -72,6 +176,9 @@ export default function Timer() {
   }, [running, started]);
 
   function startSequence() {
+    // Initialise AudioContext on user gesture
+    getAudioCtx();
+    countdownFiredRef.current = false;
     setPhase("Warning");
     setSecondsLeft(300);
     setStarted(false);
@@ -82,17 +189,19 @@ export default function Timer() {
 
   function stopReset() {
     clearInterval(intervalRef.current);
+    window.speechSynthesis?.cancel();
     setRunning(false);
     setStarted(false);
     setPhase(null);
     setSecondsLeft(300);
     setElapsed(0);
     setFinishes([]);
+    countdownFiredRef.current = false;
   }
 
   function recordFinish(boat) {
     if (!started) return;
-    if (finishes.find((f) => f.boatId === boat.id)) return; // already finished
+    if (finishes.find((f) => f.boatId === boat.id)) return;
     const finish = {
       boatId: boat.id,
       sailNumber: boat.sailNumber,
@@ -124,7 +233,6 @@ export default function Timer() {
       </header>
 
       <section className="panel">
-        {/* Phase label */}
         <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
           <span style={{
             fontSize: "0.8rem",
@@ -137,7 +245,6 @@ export default function Timer() {
           </span>
         </div>
 
-        {/* Main clock */}
         <div style={{
           fontSize: "5rem",
           fontWeight: 700,
@@ -151,7 +258,6 @@ export default function Timer() {
           {started ? formatTime(elapsed) : formatTime(secondsLeft)}
         </div>
 
-        {/* Sequence indicators */}
         {!started && (
           <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
             {SEQUENCE.map((s) => (
@@ -171,7 +277,6 @@ export default function Timer() {
           </div>
         )}
 
-        {/* Controls */}
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
           {!running ? (
             <button onClick={startSequence} style={{
@@ -205,7 +310,6 @@ export default function Timer() {
         </div>
       </section>
 
-      {/* Finish buttons — only show after gun */}
       {started && unfinished.length > 0 && (
         <section className="panel">
           <h2>Record finish</h2>
@@ -231,7 +335,6 @@ export default function Timer() {
         </section>
       )}
 
-      {/* Finishes recorded */}
       {finishes.length > 0 && (
         <section className="panel">
           <h2>Finishes</h2>

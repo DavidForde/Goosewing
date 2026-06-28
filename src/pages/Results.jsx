@@ -177,7 +177,15 @@ const INITIAL_STATE = (() => {
 
   const savedRaces = loadRaces()
   const discardThreshold = loadDiscardThreshold()
-
+  function loadTimerFinishes() {
+    try {
+      const raw = localStorage.getItem("goosewing-timer-finishes");
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
   if (savedRaces) {
     return { boats, ...savedRaces, discardThreshold }
   }
