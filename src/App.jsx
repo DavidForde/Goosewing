@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Results from "./pages/Results";
 import Registration from "./pages/Registration";
 import Protests from "./pages/Protests";
+import Timer from "./pages/Timer";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/results" element={<Results />} />
           <Route path="/registration" element={<Registration />} />
           <Route path="/protests" element={<Protests />} />
+          <Route path="/timer" element={<Timer />} />
         </Routes>
       </div>
     </BrowserRouter>

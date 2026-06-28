@@ -24,6 +24,11 @@ export default function Home() {
           <p>Submit and track hearings</p>
         </Link>
 
+        <Link to="/timer" className="card">
+  <h2>⏱ Timer</h2>
+  <p>Start sequence and record finishes</p>
+</Link>
+
       </div>
 
     </div>
