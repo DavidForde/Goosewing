@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navigation from "./components/Navigation";
-import Home from "./pages/home";
-import Results from "./pages/results";
-import Registration from "./pages/registration";
-import Protests from "./pages/protests";
+import Home from "./pages/Home";
+import Results from "./pages/Results";
+import Registration from "./pages/Registration";
+import Protests from "./pages/Protests";
 
 export default function App() {
   return (
